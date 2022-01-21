@@ -1,0 +1,45 @@
+# version: '3.8'
+
+# services:
+#   web:
+#     build: .
+#     volumes:
+#       - .:/code
+#     ports:
+#       - 5000:5000
+
+# b. ajuster notre docker-compose.yml pour prendre en compte le service de base de données
+# L’idée ici est de migrer ce qui est configurable du Dockerfile vers le docker-compose.yml, 
+# et de ne garder que ce qui est statique (comme les paquets, la définition des dépendances) dans le Dockerfile.
+
+version: '3.8'
+
+services:
+  db:
+    image: postgres:12-alpine
+    container_name: db
+    networks:
+      - default
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_PASSWORD=password
+  web:
+    build: .
+    container_name: web
+    networks:
+      - default
+    depends_on:
+      - db
+    command: ["./wait-for-it.sh", "db:5432", "--", "flask", "run"]
+    volumes:
+      - .:/code
+    ports:
+      - 5000:5000
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/twitter_api_flask
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_ENV=development
+
+volumes:
+  postgres_data:
